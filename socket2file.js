@@ -60,4 +60,7 @@ if (typeof port === 'undefined') {
     return;
 }
 
+// Remove possible leading zeros
+host = host.split('.').map(Number).join('.');
+
 socket2file.run(output_file, host, port)
