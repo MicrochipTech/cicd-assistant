@@ -1,8 +1,23 @@
 var net = require('net');
 var fs = require('fs');
+var done = false;
 
 socket2file = {
     run: function (output_file, host, port) {
+        function cleanData(data) {
+            try {
+                if (data === null) {
+                    return "";
+                }
+                // Keep only normal text chars
+                var invalidChars = /[^\n\r\u0020 -~]+/g;
+                return data.toString().replace(invalidChars, "").trim();
+            } catch (e) {
+                console.log("Exception " + str(e));
+                return "";
+            }
+        }
+        
         var wrline = fs.createWriteStream(output_file, { flags: 'w' });
         wrline.on('error', function(err) {
             console.log(`Error writing to '${output_file}'`);
@@ -17,13 +32,21 @@ socket2file = {
             console.log('Connected');
         });
 
-        client.on('data', function (data) {
-            console.log('Recieved data: ' + data);
-            wrline.write(`${data}\n`);
+        client.on('data', function (raw) {
+            var data = cleanData(raw);
+            if (data.length > 0) {
+                console.log('Received data:' + data);
+                wrline.write(data);
+            }
         });
 
         client.on('close', function () {
             console.log('Connection closed');
+            if (!done) {
+                client.connect(port, host, function () {
+                    console.log('Reconnected');
+                });
+            }
         });
 
         client.on('error', function () {
@@ -32,8 +55,14 @@ socket2file = {
         })
 
         process.on('SIGINT', function () {
-            client.destroy();
-            process.exit();
+            console.log('Recieved SIGINT, shutting down..')
+            try {
+                done = true;
+                client.destroy();
+            } catch (e) {
+                console.log("Failed to destroy connection" + e.message);
+            }
+            console.log("Socket destroyed");
         });
     }
 }
