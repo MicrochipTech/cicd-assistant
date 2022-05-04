@@ -49,10 +49,10 @@ socket2file = {
             }
         });
 
-        client.on('error', function () {
-            console.log('Connection error');
-            process.exit(-1);
-        })
+        client.on('error', function (err) {
+            console.log('Error: ' + err.message);
+            console.log('Reconnecting...');
+        });
 
         process.on('SIGINT', function () {
             console.log('Recieved SIGINT, shutting down..')
